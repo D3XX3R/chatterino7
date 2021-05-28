@@ -6,6 +6,7 @@
 #include "controllers/accounts/AccountController.hpp"
 #include "controllers/highlights/HighlightBlacklistUser.hpp"
 #include "messages/Message.hpp"
+#include "messages/layouts/MessageLayout.hpp"
 #include "providers/IvrApi.hpp"
 #include "providers/irc/IrcMessageBuilder.hpp"
 #include "providers/twitch/TwitchChannel.hpp"
@@ -32,6 +33,7 @@
 const QString TEXT_VIEWS("Views: %1");
 const QString TEXT_FOLLOWERS("Followers: %1");
 const QString TEXT_CREATED("Created: %1");
+const QString TEXT_COLOR("Color: %1");
 const QString TEXT_TITLE("%1's Usercard");
 #define TEXT_USER_ID "ID: "
 #define TEXT_UNAVAILABLE "(not available)"
@@ -87,7 +89,7 @@ namespace {
         {
             MessagePtr message = snapshot[i];
             if (checkMessageUserName(userName, message))
-            {
+            {                
                 channelPtr->addMessage(message);
             }
         }
@@ -209,8 +211,26 @@ UserInfoPopup::UserInfoPopup(bool closeAutomatically, QWidget *parent)
                 box->addStretch(1);
                 auto palette = QPalette();
                 palette.setColor(QPalette::WindowText, QColor("#aaa"));
-                this->ui_.userIDLabel = addCopyableLabel(box);
+
+                auto box2 = box.emplace<QHBoxLayout>();
+
+                auto vbox2 = box2.emplace<QVBoxLayout>()
+                        .withoutMargin()
+                        .withoutSpacing();
+
+                auto hbox2 = vbox2.emplace<QHBoxLayout>()
+                        .withoutMargin()
+                        .withoutSpacing();
+
+                auto hbox3 = vbox2.emplace<QHBoxLayout>()
+                        .withoutMargin()
+                        .withoutSpacing();
+
+
+                this->ui_.userIDLabel = addCopyableLabel(hbox2);
                 this->ui_.userIDLabel->setPalette(palette);
+                this->ui_.colorLabel = addCopyableLabel(hbox3);
+                this->ui_.colorLabel->setPalette(palette);
             }
 
             // items on the left
@@ -219,7 +239,7 @@ UserInfoPopup::UserInfoPopup(bool closeAutomatically, QWidget *parent)
             vbox.emplace<Label>(TEXT_FOLLOWERS.arg(""))
                 .assign(&this->ui_.followerCountLabel);
             vbox.emplace<Label>(TEXT_CREATED.arg(""))
-                .assign(&this->ui_.createdDateLabel);
+                .assign(&this->ui_.createdDateLabel);         
             vbox.emplace<Label>("").assign(&this->ui_.followageLabel);
             vbox.emplace<Label>("").assign(&this->ui_.subageLabel);
         }
@@ -588,6 +608,16 @@ void UserInfoPopup::updateLatestMessages()
     this->ui_.latestMessages->setVisible(hasMessages);
     this->ui_.noMessagesLabel->setVisible(!hasMessages);
 
+    // update the Color from last message
+    LimitedQueueSnapshot<MessageLayoutPtr> messageSnapshot = ui_.latestMessages->getMessagesSnapshot();
+    if(messageSnapshot.size() > 0)
+    {
+        MessageLayoutPtr messageLayoutPtr = messageSnapshot[messageSnapshot.size() - 1];
+        const Message* messagePtr = messageLayoutPtr->getMessage();
+        QString colorName = messagePtr->usernameColor.name();
+        this->usernameColor_ = colorName;
+    }
+
     // shrink dialog in case ChannelView goes from visible to hidden
     this->adjustSize();
 
@@ -602,7 +632,7 @@ void UserInfoPopup::updateLatestMessages()
             if (hasMessages)
             {
                 // display message in ChannelView
-                this->ui_.latestMessages->channel()->addMessage(message);
+                this->ui_.latestMessages->channel()->addMessage(message);                               
             }
             else
             {
@@ -638,6 +668,10 @@ void UserInfoPopup::updateUserData()
                                        QString(TEXT_UNAVAILABLE));
         this->ui_.userIDLabel->setProperty("copy-text",
                                            QString(TEXT_UNAVAILABLE));
+        this->ui_.colorLabel->setText(QString("Color ") +
+                                           QString(TEXT_UNAVAILABLE));
+        this->ui_.colorLabel->setProperty("copy-text",
+                                           QString(TEXT_UNAVAILABLE));
     };
     const auto onUserFetched = [this, hack,
                                 currentUser](const HelixUser &user) {
@@ -645,6 +679,7 @@ void UserInfoPopup::updateUserData()
         {
             return;
         }
+
 
         this->userId_ = user.id;
         this->avatarUrl_ = user.profileImageUrl;
@@ -657,6 +692,8 @@ void UserInfoPopup::updateUserData()
             TEXT_CREATED.arg(user.createdAt.section("T", 0, 0)));
         this->ui_.userIDLabel->setText(TEXT_USER_ID + user.id);
         this->ui_.userIDLabel->setProperty("copy-text", user.id);
+        this->ui_.colorLabel->setText(TEXT_COLOR.arg(this->usernameColor_));
+        this->ui_.colorLabel->setProperty("copy-text", this->usernameColor_);
 
         if (isInStreamerMode() &&
             getSettings()->streamerModeHideUsercardAvatars)

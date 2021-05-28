@@ -39,6 +39,7 @@ private:
     QString userName_;
     QString userId_;
     QString avatarUrl_;
+    QString usernameColor_;
     ChannelPtr channel_;
 
     pajlada::Signals::NoArgSignal userStateChanged_;
@@ -56,6 +57,7 @@ private:
         Label *followerCountLabel = nullptr;
         Label *createdDateLabel = nullptr;
         Label *userIDLabel = nullptr;
+        Label *colorLabel = nullptr;
         Label *followageLabel = nullptr;
         Label *subageLabel = nullptr;
 
