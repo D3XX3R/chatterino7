@@ -271,9 +271,8 @@ UserInfoPopup::UserInfoPopup(bool closeAutomatically, QWidget *parent)
                 this->ui_.userIDLabel = addCopyableLabel(box, "Copy ID");
                 this->ui_.userIDLabel->setPalette(palette);
 
-				this->ui_.localizedNameLabel->setVisible(false);
+                this->ui_.localizedNameLabel->setVisible(false);
                 this->ui_.localizedNameCopyButton->setVisible(false);
-
 
                 auto box2 = box.emplace<QHBoxLayout>();
 
